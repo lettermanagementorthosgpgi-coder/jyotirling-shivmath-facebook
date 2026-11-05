@@ -1,0 +1,42 @@
+name: Build Facebook video pages
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build video pages
+        env:
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          FB_GRAPH_API_VERSION: ${{ vars.FB_GRAPH_API_VERSION }}
+          SITE_BASE_URL: ${{ vars.SITE_BASE_URL }}
+        run: python scripts/build_facebook_pages.py
+
+      - name: Commit generated pages
+        run: |
+          if [[ -n "$(git status --porcelain)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add public/facebook public/sitemap-facebook.xml data/facebook_videos.json
+            git commit -m "Build Facebook video pages"
+            git push
+          else
+            echo "No generated changes to commit."
+          fi
